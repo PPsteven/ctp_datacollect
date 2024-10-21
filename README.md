@@ -9,7 +9,7 @@
     - 采集链接库：6.7.0_P1_CP_LinuxDataCollect.so
     - 采集链接库头文件：6.7.0_P1_CP_LinuxDataCollect.h
 
-## CPP调用
+## 1. CPP调用
 > 因为 so 文件本身就是C++编译的，所以可以直接调用。
 
 ```cpp
@@ -55,9 +55,9 @@ sudo ./datacollect_cpp
 sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. ./datacollect_cpp
 ```
 
-## Go调用-使用wrapper将C++的so包装成C的so
-> 因为 go 语言是跨平台的，所以需要使用 cgo 来调用 C 语言编写的链接库。
-> 使用wrapper将C++的so包装成C的so，然后go调用C的so。
+## 2.Go调用-使用wrapper将C++的so包装成C的so
+> 使用 cgo 来调用 C 语言编写的链接库。
+> 首选需要使用wrapper的方法，将C++的so包装成C的so，然后go调用C的so。
 
 ### 创建C++ Wrapper
 
@@ -177,14 +177,15 @@ sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. ./datacollect_go
 
 通过这种方式，我们成功地使用Go调用了原始的C++共享库。这个方法的优点是它允许我们在不修改原始C++库的情况下，为Go程序提供一个干净的接口。
 
-## Go调用-使用cgo直接调用C++的so
+## 3.Go调用-使用cgo直接调用C++的so
 
-除了使用 C++ wrapper 的方法，我们还可以使用 cgo 直接调用 C++ 的共享库。这种方法更加直接，但需要注意一些细节。
+除了使用 C++ wrapper 的方法，我们还可以使用 cgo 直接调用 C++ 的共享库。这种方法更加直接，无需编写wrapper文件和编译新的so文件。但是需要注意C++中的函数名称修饰问题（name mangling）。
 
 ### 查看共享库中的真实函数名
 
 > 在使用 cgo 直接调用 C++ 共享库时，我们需要使用 `nm` 命令来查看共享库中的真实函数名。这是因为 C++ 编译器会对函数名进行名称修饰（name mangling）。
-> 名称修饰是 C++ 编译器用来支持函数重载和命名空间等特性的一种技术。它会将函数的参数类型、命名空间等信息编码到函数名中，以区分同名但参数不同的函数。这导致 C++ 函数在编译后的二进制文件中的实际名称与源代码中的名称不同。例如，`CTP_GetSystemInfo` 函数在编译后可能变成 `_Z17CTP_GetSystemInfoPcRi`。这个修饰后的名称包含了函数名、参数数量和类型等信息。使用 `nm` 命令可以查看共享库中的符号表，从而找到这些被修饰过的函数名。这对于正确地在 Go 代码中声明和调用这些函数是必要的，因为 cgo 需要知道确切的函数名才能正确链接。
+
+> 名称修饰是 C++ 编译器用来支持函数重载和命名空间等特性的一种技术。它会将函数的参数类型、命名空间等信息编码到函数名中，以区分同名但参数不同的函数。这导致 C++ 函数在编译后的二进制文件中的实际名称与源代码中的名称不同。`CTP_GetSystemInfo` 函数在编译后可能变成 `_Z17CTP_GetSystemInfoPcRi`。这个修饰后的名称包含了函数名、参数数量和类型等信息。使用 `nm` 命令可以查看共享库中的符号表，从而找到这些被修饰过的函数名。这对于正确地在 Go 代码中声明和调用这些函数是必要的，因为 cgo 需要知道确切的函数名才能正确链接。
 
 ```bash
 nm libDataCollect.so | grep CTP_GetSystemInfo
